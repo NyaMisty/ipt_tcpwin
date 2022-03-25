@@ -8,6 +8,7 @@
 
 struct ipt_TWIN_info {
 	__u16	win;
+    __u16	winscale;
 };
 
 #endif

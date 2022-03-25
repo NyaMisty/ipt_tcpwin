@@ -23,30 +23,57 @@ MODULE_AUTHOR("Vadim Fedorenko <junjunk@fromru.com>");
 MODULE_DESCRIPTION("Xtables: TCPWIN field modification target");
 MODULE_LICENSE("GPL");
 
+static inline unsigned int
+optlen(const u_int8_t *opt, unsigned int offset)
+{
+	/* Beware zero-length options: make finite progress */
+	if (opt[offset] <= TCPOPT_NOP || opt[offset+1] == 0)
+		return 1;
+	else
+		return opt[offset+1];
+}
+
 static unsigned int
 twin_tg(struct sk_buff *skb, const struct xt_action_param *par)
 {
-        struct tcphdr *tcph;
-        struct iphdr *iph;
-        const struct ipt_TWIN_info *info = par->targinfo;
-        int offset, len;
+	struct tcphdr *tcph;
+	struct iphdr *iph;
+	const struct ipt_TWIN_info *info = par->targinfo;
+	int offset, len;
+	int tcp_hdrlen;
 
-        if (!skb_make_writable(skb, skb->len))
-                return NF_DROP;
-        if (skb_linearize(skb))
-                return NF_DROP;
-        iph = ip_hdr(skb);
-        if (iph && iph->protocol)
-        {
-                tcph = tcp_hdr(skb);
-                tcph->window = htons(info->win);
-                offset = skb_transport_offset(skb);
-                len = skb->len - offset;
-                tcph->check = 0;
-                tcph->check = csum_tcpudp_magic((iph->saddr), (iph->daddr), len, IPPROTO_TCP, csum_partial((char *)tcph, len, 0));
-                skb->ip_summed = CHECKSUM_NONE;
-        }
-        return XT_CONTINUE;
+	if (!skb_make_writable(skb, skb->len))
+		return NF_DROP;
+	if (skb_linearize(skb))
+		return NF_DROP;
+	iph = ip_hdr(skb);
+	if (!(iph && iph->protocol))
+		return XT_CONTINUE;
+
+	// get tcp hdr here
+	tcph = tcp_hdr(skb);
+	tcp_hdrlen = tcph->doff * 4;
+
+	tcph->window = htons(info->win);
+	
+	opt = (u_int8_t *)tcph;
+	for (i = sizeof(struct tcphdr); i <= tcp_hdrlen - TCPOLEN_WINDOW; i += optlen(opt, i)) {
+		if (opt[i] == TCPOLEN_WINDOW && opt[i+1] == TCPOLEN_WINDOW) {
+			u_int8_t oldscale;
+
+			oldscale = opt[i+2];
+	
+			opt[i+2] = info->winscale;
+		}
+		// change scale only if window scale is enabled
+	}
+
+	offset = skb_transport_offset(skb);
+	len = skb->len - offset;
+	tcph->check = 0;
+	tcph->check = csum_tcpudp_magic((iph->saddr), (iph->daddr), len, IPPROTO_TCP, csum_partial((char *)tcph, len, 0));
+	skb->ip_summed = CHECKSUM_NONE;
+	return XT_CONTINUE;
 }
 
 static int twin_tg_check(const struct xt_tgchk_param *par)
@@ -56,14 +83,14 @@ static int twin_tg_check(const struct xt_tgchk_param *par)
 
 static struct xt_target hl_tg_reg[] __read_mostly = {
 	{
-		.name       = "TCPWIN",
+		.name	   = "TCPWIN",
 		.revision   = 0,
-		.family     = NFPROTO_IPV4,
-		.target     = twin_tg,
+		.family	 = NFPROTO_IPV4,
+		.target	 = twin_tg,
 		.targetsize = sizeof(struct ipt_TWIN_info),
-		.table      = "mangle",
+		.table	  = "mangle",
 		.checkentry = twin_tg_check,
-		.me         = THIS_MODULE,
+		.me	 = THIS_MODULE,
 	},
 };
 

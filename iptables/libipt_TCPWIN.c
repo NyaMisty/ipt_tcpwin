@@ -10,13 +10,17 @@
 static const struct xt_option_entry TWIN_opts[] = {
 	{.name = "tcpwin-set", .type = XTTYPE_UINT16, .id = 1,
 	 .excl = 0, .flags = XTOPT_PUT, XTOPT_POINTER(struct ipt_TWIN_info, win)},
+    {.name = "tcpwinscale-set", .type = XTTYPE_UINT16, .id = 2,
+	 .excl = 0, .flags = XTOPT_PUT, XTOPT_POINTER(struct ipt_TWIN_info, winscale)},
 	XTOPT_TABLEEND,
 };
 
 static void TWIN_help(void)
 {
 	printf("TCP window target options\n"
-		"  --tcpwin-set value		Set TCP window to <value 0-65535>\n");
+		"  --tcpwin-set value		    Set TCP window to <value 0-65535>\n"
+        "  --tcpwinscale-set value		Set TCP window scale to <value 0-14>\n"
+    );
 }
 
 static void TWIN_parse(struct xt_option_call *cb)
@@ -33,6 +37,7 @@ static void TWIN_save(const void *ip, const struct xt_entry_target *target)
 	const struct ipt_TWIN_info *info = 
 		(struct ipt_TWIN_info *) target->data;
 	printf(" --tcpwin-set %u", info->win);
+    printf(" --tcpwinscale-set %u", info->winscale);
 }
 
 static void TWIN_print(const void *ip, const struct xt_entry_target *target,
@@ -41,6 +46,7 @@ static void TWIN_print(const void *ip, const struct xt_entry_target *target,
 	const struct ipt_TWIN_info *info =
 		(struct ipt_TWIN_info *) target->data;
 	printf(" TCP window set to %u", info->win);
+    printf(" TCP window scale set to %u", info->winscale);
 }
 
 static struct xtables_target twin_tg_reg = {
