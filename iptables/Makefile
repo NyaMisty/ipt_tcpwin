@@ -8,5 +8,8 @@ lib%.so: lib%.o
 lib%.o: lib%.c
 	gcc ${CFLAGS} -D_INIT=lib$*_init -fPIC -c -o $@ $<;
 
+install: libipt_TCPWIN.so
+	install -D $< $(DESTDIR)$(shell pkg-config --variable xtlibdir xtables)/$<
+
 clean:
 	rm -f *.{o,so}

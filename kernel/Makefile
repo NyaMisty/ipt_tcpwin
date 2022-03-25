@@ -11,9 +11,12 @@ PWD	:= $(shell pwd)
 all:	modules
 
 modules:
-	$(MAKE) -C $(KDIR) SUBDIRS=$(PWD) modules
+	$(MAKE) -C $(KDIR) M=$(PWD) modules
+
+install:
+	$(MAKE) -C $(KDIR) M=$(PWD) modules_install INSTALL_MOD_PATH=$(DESTDIR)
 
 clean:
-	$(MAKE) -C $(KDIR) SUBDIRS=$(PWD) clean
+	$(MAKE) -C $(KDIR) M=$(PWD) clean
 
 endif
