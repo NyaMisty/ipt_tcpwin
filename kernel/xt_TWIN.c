@@ -14,6 +14,7 @@
 #include <linux/ip.h>
 #include <linux/tcp.h>
 #include <net/checksum.h>
+#include <net/tcp.h>
 
 #include <linux/netfilter/x_tables.h>
 #include "ipt_TWIN.h"
@@ -40,9 +41,11 @@ twin_tg(struct sk_buff *skb, const struct xt_action_param *par)
 	struct iphdr *iph;
 	const struct ipt_TWIN_info *info = par->targinfo;
 	int offset, len;
+    int i;
 	int tcp_hdrlen;
+	u_int8_t *opt;
 
-	if (!skb_make_writable(skb, skb->len))
+	if (skb_ensure_writable(skb, skb->len))
 		return NF_DROP;
 	if (skb_linearize(skb))
 		return NF_DROP;
